@@ -6,6 +6,7 @@ import {
 import GameBoard from './components/GameBoard';
 import HUD from './components/HUD';
 import FallingQuiz from './games/FallingQuiz';
+import PeriodicQuiz from './games/PeriodicQuiz';
 import {
   playCompound, playInvalid, playTick,
   isMuted, toggleMute,
@@ -34,7 +35,12 @@ function GameSelector({ onSelect }) {
         <button className="gs-card" onClick={() => onSelect('quiz')}>
           <span className="gs-card-icon">⬇️</span>
           <span className="gs-card-title">원소 퀴즈</span>
-          <span className="gs-card-desc">떨어지는 원자 번호를 보고<br />원소 기호를 맞추세요</span>
+          <span className="gs-card-desc">떨어지는 원소 기호를 보고<br />한글 이름을 맞추세요</span>
+        </button>
+        <button className="gs-card" onClick={() => onSelect('periodic')}>
+          <span className="gs-card-icon">🗺️</span>
+          <span className="gs-card-title">주기율표 퀴즈</span>
+          <span className="gs-card-desc">주기율표에서 원소의<br />위치를 찾아보세요</span>
         </button>
       </div>
     </div>
@@ -45,17 +51,9 @@ function GameSelector({ onSelect }) {
 export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
 
-  /* 퀴즈 게임 */
-  if (selectedGame === 'quiz') {
-    return <FallingQuiz onBack={() => setSelectedGame(null)} />;
-  }
-
-  /* 게임 선택 */
-  if (selectedGame === null) {
-    return <GameSelector onSelect={setSelectedGame} />;
-  }
-
-  /* 화학 퍼즐 */
+  if (selectedGame === 'quiz')     return <FallingQuiz  onBack={() => setSelectedGame(null)} />;
+  if (selectedGame === 'periodic') return <PeriodicQuiz onBack={() => setSelectedGame(null)} />;
+  if (selectedGame === null)       return <GameSelector onSelect={setSelectedGame} />;
   return <PuzzleGame onBack={() => setSelectedGame(null)} />;
 }
 
