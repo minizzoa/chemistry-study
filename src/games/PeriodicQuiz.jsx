@@ -260,8 +260,19 @@ export default function PeriodicQuiz({ onBack }) {
       {/* 주기율표 */}
       <div className="pq-table-wrap">
         <div className="pq-table">
+
+          {/* 족(그룹) 번호 헤더 */}
+          <div className="pq-row">
+            <div className="pq-period-label" />
+            {GROUPS.map(g => (
+              <div key={g} className="pq-group-label">{g}</div>
+            ))}
+          </div>
+
           {PERIODS.map(p => (
             <div key={p} className="pq-row">
+              {/* 주기 번호 */}
+              <div className="pq-period-label">{p}</div>
               {GROUPS.map(g => {
                 const el = GRID_MAP[p]?.[g];
 
@@ -271,7 +282,6 @@ export default function PeriodicQuiz({ onBack }) {
                 const isSolved  = solvedSet.has(el.symbol);
                 const isCorrect = flash?.symbol === el.symbol && flash.type === 'correct';
                 const isWrong   = flash?.symbol === el.symbol && flash.type === 'wrong';
-                // 힌트: 현재 찾는 원소의 주기/족에 속하는 빈칸만 강조
                 const isHintP   = hintLevel >= 1 && currentEl?.period === p && isBlank;
                 const isHintG   = hintLevel >= 2 && currentEl?.group  === g && isBlank;
 
