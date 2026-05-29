@@ -118,6 +118,7 @@ export default function FallingQuiz({ onBack }) {
     setLives(newLives);
 
     playTimeout();
+    setToast({ text: `${el.symbol} = ${el.name}`, type: 'timeout', key: Date.now() });
 
     if (newLives <= 0) {
       activeRef.current = false;
