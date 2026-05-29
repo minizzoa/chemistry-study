@@ -167,7 +167,21 @@
   font-family: 'Pretendard', sans-serif;
 }
 
-.fq-hud-lives { font-size: 22px; letter-spacing: 2px; }
+.fq-hud-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.fq-hud-lives  { font-size: 20px; letter-spacing: 2px; }
+.fq-mute-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.7;
+  transition: opacity .15s, transform .08s;
+  line-height: 1;
+}
+.fq-mute-btn:active { transform: scale(.85); opacity: 1; }
 
 /* ── Fall Area ─────────────────────────────── */
 .fq-fall-area {

@@ -6,6 +6,10 @@ import {
 import GameBoard from './components/GameBoard';
 import HUD from './components/HUD';
 import FallingQuiz from './games/FallingQuiz';
+import {
+  playCompound, playInvalid, playTick,
+  isMuted, toggleMute,
+} from './utils/sound';
 import './App.css';
 
 const ROWS = 7;
@@ -60,6 +64,7 @@ function PuzzleGame({ onBack }) {
   const [grid, setGrid] = useState(() => generateGrid(ROWS, COLS));
   const [selection, setSelection] = useState([]);
   const [score, setScore] = useState(0);
+  const [muted, setMuted] = useState(isMuted());
   const [foundCount, setFoundCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const [gameOver, setGameOver] = useState(false);
@@ -95,6 +100,7 @@ function PuzzleGame({ onBack }) {
     if (lastTileRef.current.key === key && now - lastTileRef.current.time < 200) return;
     lastTileRef.current = { key, time: now };
 
+    playTick();
     setSelection(prev => {
       const existingIdx = prev.findIndex(p => p.row === row && p.col === col);
       if (existingIdx !== -1) {
@@ -116,11 +122,13 @@ function PuzzleGame({ onBack }) {
     const compound = findMatchingCompound(atoms);
 
     if (compound) {
+      playCompound();
       setScore(s => s + compound.score);
       setFoundCount(c => c + 1);
       showMessage(`${compound.formula}  ${compound.name}  +${compound.score}점`, 'success');
       setGrid(prev => placeCompoundAndRefill(prev, selection, compound, ROWS, COLS));
     } else {
+      playInvalid();
       const formula = atomsToFormula(atoms);
       showMessage(`${formula} — 유효하지 않은 화합물`, 'error');
       setShakeBar(true);
@@ -190,7 +198,8 @@ function PuzzleGame({ onBack }) {
   /* 게임 플레이 */
   return (
     <div className="game-wrap">
-      <HUD score={score} timeLeft={timeLeft} foundCount={foundCount} />
+      <HUD score={score} timeLeft={timeLeft} foundCount={foundCount}
+           muted={muted} onMuteToggle={() => setMuted(toggleMute())} />
 
       {message && (
         <div key={message.key} className={`msg msg-${message.type}`}>

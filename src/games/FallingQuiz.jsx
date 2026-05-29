@@ -1,5 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { QUIZ_ELEMENTS, pickChoices } from '../data/quizElements';
+import {
+  playCorrect, playCombo, playWrong, playTimeout,
+  playGameOver, playLevelUp, isMuted, toggleMute,
+} from '../utils/sound';
 import './FallingQuiz.css';
 
 const TOTAL_LIVES = 3;
@@ -18,6 +22,7 @@ function calcPoints(level, streak) {
 
 export default function FallingQuiz({ onBack }) {
   const [phase, setPhase]         = useState('splash'); // splash | playing | over
+  const [muted, setMuted]         = useState(isMuted());
   const [lives, setLives]         = useState(TOTAL_LIVES);
   const [score, setScore]         = useState(0);
   const [streak, setStreak]       = useState(0);
@@ -66,9 +71,15 @@ export default function FallingQuiz({ onBack }) {
       scoreRef.current = newScore;
       setScore(newScore);
 
+      const oldLevel = levelRef.current;
       const newLevel = Math.floor(newScore / 100) + 1;
       levelRef.current = newLevel;
       setLevel(newLevel);
+
+      // 소리: 레벨업 > 콤보 > 정답 순 우선순위
+      if (newLevel > oldLevel)  playLevelUp();
+      else if (str >= 3)        playCombo();
+      else                      playCorrect();
 
       setChoiceState({ [elemRef.current.symbol]: 'correct' });
       setToast({ text: `+${pts}${str >= 3 ? ` 🔥×${str}` : ''}`, type: 'correct' });
@@ -82,6 +93,8 @@ export default function FallingQuiz({ onBack }) {
       livesRef.current = newLives;
       setLives(newLives);
 
+      playWrong();
+
       const cs = {};
       if (wrongSym) cs[wrongSym] = 'wrong';
       cs[elemRef.current.symbol] = 'reveal';
@@ -89,7 +102,7 @@ export default function FallingQuiz({ onBack }) {
       setToast({ text: `${elemRef.current.symbol} — ${elemRef.current.name}`, type: 'wrong' });
 
       if (newLives <= 0) {
-        setTimeout(() => setPhase('over'), 950);
+        setTimeout(() => { playGameOver(); setPhase('over'); }, 950);
       } else {
         askNext();
       }
@@ -114,12 +127,13 @@ export default function FallingQuiz({ onBack }) {
     livesRef.current = newLives;
     setLives(newLives);
 
+    playTimeout();
     setChoiceState({ [elemRef.current.symbol]: 'reveal' });
     setToast({ text: '⏰ 시간 초과!', type: 'timeout' });
     setTileOn(false);
 
     if (newLives <= 0) {
-      setTimeout(() => setPhase('over'), 950);
+      setTimeout(() => { playGameOver(); setPhase('over'); }, 950);
     } else {
       askNext();
     }
@@ -202,8 +216,17 @@ export default function FallingQuiz({ onBack }) {
           <span className="fq-badge-lv">Lv.{level}</span>
           {streak >= 3 && <span className="fq-badge-streak">🔥×{streak}</span>}
         </div>
-        <div className="fq-hud-lives">
-          {'❤️'.repeat(lives)}{'🖤'.repeat(Math.max(0, TOTAL_LIVES - lives))}
+        <div className="fq-hud-right">
+          <div className="fq-hud-lives">
+            {'❤️'.repeat(lives)}{'🖤'.repeat(Math.max(0, TOTAL_LIVES - lives))}
+          </div>
+          <button
+            className="fq-mute-btn"
+            onClick={() => setMuted(toggleMute())}
+            aria-label={muted ? '소리 켜기' : '소리 끄기'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
         </div>
       </div>
 

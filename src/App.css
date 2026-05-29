@@ -142,6 +142,25 @@
   text-transform: uppercase;
 }
 
+.hud-right-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-mute-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.75;
+  transition: opacity .15s, transform .08s;
+}
+.hud-mute-btn:active { transform: scale(.88); opacity: 1; }
+
 .hud-timer {
   font-size: 32px;
   font-weight: 800;
