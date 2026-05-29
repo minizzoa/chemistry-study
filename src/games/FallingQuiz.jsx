@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { QUIZ_ELEMENTS } from '../data/quizElements';
+import { QUIZ_ELEMENTS, pickChoices } from '../data/quizElements';
 import {
   playCorrect, playCombo, playWrong, playTimeout,
   playGameOver, playLevelUp, isMuted, toggleMute,
@@ -7,16 +7,14 @@ import {
 import './FallingQuiz.css';
 
 const TOTAL_LIVES = 5;
-const MAX_TILES   = 5;            // 동시 최대 타일 수
-const SPEED_TICK  = 7000;         // ms마다 속도 1단계 증가
+const MAX_TILES   = 5;
+const SPEED_TICK  = 7000;
 
 function getFallDuration(speed) {
-  // speed 0 → 7.2s, 이후 단계마다 -260ms, 최소 2.2s
   return Math.max(2200, 7200 - speed * 260);
 }
 
 function getSpawnInterval(speed) {
-  // speed 0 → 2.8s, 이후 단계마다 -180ms, 최소 1.1s
   return Math.max(1100, 2800 - speed * 180);
 }
 
@@ -27,41 +25,62 @@ function calcPoints(level, streak) {
 }
 
 export default function FallingQuiz({ onBack }) {
-  const [phase, setPhase]             = useState('splash');
-  const [muted, setMuted]             = useState(isMuted());
-  const [lives, setLives]             = useState(TOTAL_LIVES);
-  const [score, setScore]             = useState(0);
-  const [streak, setStreak]           = useState(0);
-  const [speed, setSpeed]             = useState(0);
-  const [tiles, setTiles]             = useState([]);  // 낙하 중인 타일 배열
-  const [inputValue, setInputValue]   = useState('');
-  const [inputStatus, setInputStatus] = useState(null); // null|'correct'|'wrong'
-  const [toast, setToast]             = useState(null);
+  const [phase,        setPhase]        = useState('splash');
+  const [muted,        setMuted]        = useState(isMuted());
+  const [lives,        setLives]        = useState(TOTAL_LIVES);
+  const [score,        setScore]        = useState(0);
+  const [streak,       setStreak]       = useState(0);
+  const [speed,        setSpeed]        = useState(0);
+  const [tiles,        setTiles]        = useState([]);
+  const [choices,      setChoices]      = useState([]);     // 보기 4개
+  const [targetId,     setTargetId]     = useState(null);   // 현재 보기가 가리키는 타일 id
+  const [choiceStatus, setChoiceStatus] = useState(null);   // {type:'correct'|'wrong', symbol}
+  const [toast,        setToast]        = useState(null);
 
-  // refs — 콜백 내 stale closure 방지
   const livesRef  = useRef(TOTAL_LIVES);
   const scoreRef  = useRef(0);
   const strRef    = useRef(0);
   const speedRef  = useRef(0);
-  const activeRef = useRef(false);   // 게임 진행 중 여부
-  const inputRef  = useRef(null);
+  const activeRef = useRef(false);
 
-  // tiles state를 ref로 동기화 (매 렌더마다 갱신)
   const tilesRef = useRef([]);
   tilesRef.current = tiles;
+
+  /* ─── 보기 자동 갱신 ────────────────────────
+     항상 가장 오래된 타일(= 가장 바닥에 가까운)을
+     기준으로 4개 보기를 생성
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (phase !== 'playing') return;
+
+    if (tiles.length === 0) {
+      setTargetId(null);
+      setChoices([]);
+      return;
+    }
+
+    // 정답 맞힌 직후 애니메이션 중에는 보기 교체 대기
+    if (choiceStatus?.type === 'correct') return;
+
+    const oldest = tiles.reduce((a, b) => (a.id < b.id ? a : b));
+    if (oldest.id !== targetId) {
+      setTargetId(oldest.id);
+      setChoices(pickChoices(oldest.el, QUIZ_ELEMENTS));
+      setChoiceStatus(null);
+    }
+  }, [tiles, targetId, phase, choiceStatus]);
 
   /* ─── 타일 생성 ─────────────────────────── */
   const spawnTile = useCallback(() => {
     if (!activeRef.current) return;
 
-    // 현재 화면에 있는 원소와 중복 최소화
     const existing = new Set(tilesRef.current.map(t => t.el.symbol));
-    const pool = QUIZ_ELEMENTS.filter(e => !existing.has(e.symbol));
+    const pool   = QUIZ_ELEMENTS.filter(e => !existing.has(e.symbol));
     const source = pool.length > 0 ? pool : QUIZ_ELEMENTS;
-    const el  = source[Math.floor(Math.random() * source.length)];
+    const el     = source[Math.floor(Math.random() * source.length)];
 
     const dur = getFallDuration(speedRef.current);
-    const x   = 12 + Math.random() * 68; // 12 % ~ 80 % (타일 너비 고려)
+    const x   = 12 + Math.random() * 68;
 
     setTiles(prev =>
       prev.length >= MAX_TILES
@@ -70,46 +89,32 @@ export default function FallingQuiz({ onBack }) {
     );
   }, []);
 
-  /* ─── 스폰 타이머 (재귀 setTimeout) ──────── */
+  /* ─── 스폰 타이머 ────────────────────────── */
   useEffect(() => {
     if (phase !== 'playing') return;
-
-    // 게임 시작 시 즉시 첫 타일 생성
     spawnTile();
-
     let tid;
     function schedule() {
-      tid = setTimeout(() => {
-        spawnTile();
-        schedule();
-      }, getSpawnInterval(speedRef.current));
+      tid = setTimeout(() => { spawnTile(); schedule(); }, getSpawnInterval(speedRef.current));
     }
     schedule();
-
     return () => clearTimeout(tid);
   }, [phase, spawnTile]);
 
-  /* ─── 속도 증가 타이머 ──────────────────── */
+  /* ─── 속도 증가 타이머 ───────────────────── */
   useEffect(() => {
     if (phase !== 'playing') return;
-
-    const timer = setInterval(() => {
-      setSpeed(s => {
-        const ns = s + 1;
-        speedRef.current = ns;
-        return ns;
-      });
+    const t = setInterval(() => {
+      setSpeed(s => { const ns = s + 1; speedRef.current = ns; return ns; });
     }, SPEED_TICK);
-
-    return () => clearInterval(timer);
+    return () => clearInterval(t);
   }, [phase]);
 
-  /* ─── 타일이 바닥 도달 → 생명 감소 ────── */
+  /* ─── 타일 바닥 도달 → 생명 감소 ─────────── */
   const handleTileEnd = useCallback((tileId, el) => {
     if (!activeRef.current) return;
 
     setTiles(prev => prev.filter(t => t.id !== tileId));
-
     strRef.current = 0;
     setStreak(0);
 
@@ -127,17 +132,16 @@ export default function FallingQuiz({ onBack }) {
     }
   }, []);
 
-  /* ─── 입력 제출 → 일치 타일 제거 ───────── */
-  const handleSubmit = useCallback(() => {
-    const answer = inputValue.trim();
-    if (!answer) return;
+  /* ─── 보기 버튼 클릭 ─────────────────────── */
+  const handleChoiceClick = useCallback((choice) => {
+    if (!activeRef.current || choiceStatus) return;
 
-    // 일치하는 타일 중 가장 오래된 것(= 가장 아래 있는 것) 제거
-    const matchIdx = tilesRef.current.findIndex(t => t.el.name === answer);
+    const target = tilesRef.current.find(t => t.id === targetId);
+    if (!target) return;
 
-    if (matchIdx !== -1) {
-      const matched = tilesRef.current[matchIdx];
-      setTiles(prev => prev.filter(t => t.id !== matched.id));
+    if (choice.name === target.el.name) {
+      // ✅ 정답
+      setTiles(prev => prev.filter(t => t.id !== target.id));
 
       const lvl = Math.floor(scoreRef.current / 100) + 1;
       const str = strRef.current + 1;
@@ -152,29 +156,23 @@ export default function FallingQuiz({ onBack }) {
       scoreRef.current = newScore;
       setScore(newScore);
 
-      if (newLevel > oldLevel)  playLevelUp();
-      else if (str >= 3)        playCombo();
-      else                      playCorrect();
+      if (newLevel > oldLevel) playLevelUp();
+      else if (str >= 3)       playCombo();
+      else                     playCorrect();
 
-      setInputStatus('correct');
+      setChoiceStatus({ type: 'correct', symbol: choice.symbol });
       setToast({ text: `+${pts}${str >= 3 ? ` 🔥×${str}` : ''}`, type: 'correct', key: Date.now() });
-      setInputValue('');
-      setTimeout(() => {
-        setInputStatus(null);
-        inputRef.current?.focus();
-      }, 380);
+      setTimeout(() => setChoiceStatus(null), 420);
 
     } else {
-      // 오답 — 생명 소모 없음, 입력창만 흔들림
+      // ❌ 오답 — 생명 소모 없음
       playWrong();
-      setInputStatus('wrong');
-      setTimeout(() => {
-        setInputStatus(null);
-        setInputValue('');
-        inputRef.current?.focus();
-      }, 380);
+      strRef.current = 0;
+      setStreak(0);
+      setChoiceStatus({ type: 'wrong', symbol: choice.symbol });
+      setTimeout(() => setChoiceStatus(null), 380);
     }
-  }, [inputValue]);
+  }, [targetId, choiceStatus]);
 
   /* ─── 시작 / 재시작 ─────────────────────── */
   const startGame = () => {
@@ -183,12 +181,12 @@ export default function FallingQuiz({ onBack }) {
     strRef.current   = 0;           setStreak(0);
     speedRef.current = 0;           setSpeed(0);
     setTiles([]);
-    setInputValue('');
-    setInputStatus(null);
+    setChoices([]);
+    setTargetId(null);
+    setChoiceStatus(null);
     setToast(null);
     activeRef.current = true;
     setPhase('playing');
-    setTimeout(() => inputRef.current?.focus(), 200);
   };
 
   const level = Math.floor(score / 100) + 1;
@@ -199,10 +197,10 @@ export default function FallingQuiz({ onBack }) {
       <div className="fq-card">
         <div className="fq-splash-icon">🔬</div>
         <h1>원소 퀴즈</h1>
-        <p>내려오는 원소 기호를 보고<br />한글 이름을 입력하세요!</p>
+        <p>내려오는 원소 기호를 보고<br />보기 4개 중 이름을 맞춰보세요!</p>
         <ul className="fq-rules">
           <li>⬇️ 여러 원소 타일이 동시에 내려와요</li>
-          <li>⌨️ 한글 이름을 입력하면 해당 타일 제거</li>
+          <li>🔲 보기 4개 중 해당 원소 이름을 탭</li>
           <li>❤️ 타일이 바닥에 닿으면 생명 감소 (5개)</li>
           <li>⚡ 시간이 지날수록 점점 빨라져요!</li>
           <li>🔥 연속 정답으로 콤보 보너스!</li>
@@ -269,7 +267,7 @@ export default function FallingQuiz({ onBack }) {
         {tiles.map(tile => (
           <div
             key={tile.id}
-            className="fq-tile"
+            className={`fq-tile${tile.id === targetId ? ' fq-tile-target' : ''}`}
             style={{
               '--fdur': `${tile.dur}ms`,
               '--col':  tile.el.color,
@@ -293,30 +291,26 @@ export default function FallingQuiz({ onBack }) {
         )}
       </div>
 
-      {/* 입력창 */}
-      <div className="fq-input-area">
-        <div className="fq-input-row">
-          <input
-            ref={inputRef}
-            className={`fq-input${inputStatus ? ' fq-input-' + inputStatus : ''}`}
-            type="text"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
-            placeholder="한글 이름 입력 (예: 산소)"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-          <button
-            className="fq-submit-btn"
-            onClick={handleSubmit}
-            disabled={!inputValue.trim()}
-          >
-            확인
-          </button>
-        </div>
+      {/* 보기 4개 */}
+      <div className="fq-choices">
+        {choices.length > 0
+          ? choices.map(c => {
+              const st = choiceStatus?.symbol === c.symbol ? choiceStatus.type : null;
+              return (
+                <button
+                  key={c.symbol}
+                  className={`fq-choice-btn${st ? ` fq-choice-${st}` : ''}`}
+                  onClick={() => handleChoiceClick(c)}
+                  disabled={!!choiceStatus}
+                >
+                  {c.name}
+                </button>
+              );
+            })
+          : Array.from({ length: 4 }).map((_, i) => (
+              <button key={i} className="fq-choice-btn fq-choice-empty" disabled>—</button>
+            ))
+        }
       </div>
     </div>
   );
