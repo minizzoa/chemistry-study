@@ -194,8 +194,8 @@
 
 /* ── Falling Tile ──────────────────────────── */
 @keyframes fq-fall {
-  from { top: -110px; }
-  to   { top: calc(100% - 96px); }
+  from { top: -120px; }
+  to   { top: calc(100% - 106px); }
 }
 
 @keyframes fq-timebar {
@@ -203,44 +203,50 @@
   to   { transform: scaleX(0); }
 }
 
+/* 기존 원소 타일과 완전히 동일한 키캡 스타일 */
 .fq-tile {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 90px;
-  height: 90px;
-  background: #ffffff;
-  border-radius: 16px;
-  /* 기존 타일과 동일한 키캡 스타일 */
+  width: 96px;
+  height: 96px;
+  background: var(--col, #ffffff);
+  border-radius: 14px;
   border: 1px solid #e0e0e0;
   border-bottom: none;
-  box-shadow: 0 6px 0 #b0bec5;
+  box-shadow: 0 6px 0 #9aa3ad;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   animation: fq-fall var(--fdur, 3s) linear forwards;
   overflow: hidden;
+  position: absolute;
 }
 
-.fq-tile-num {
-  font-family: 'Pretendard', sans-serif;
-  font-size: 40px;
-  font-weight: 800;
-  color: #1e293b;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.fq-tile-q {
-  font-size: 14px;
-  color: #94a3b8;
+/* 원자 번호 — 기존 .tile-value 와 동일 */
+.fq-tile-atomic {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  font-size: 11px;
   font-weight: 700;
+  color: #888;
   line-height: 1;
+  pointer-events: none;
 }
 
-/* 타임바 (타일 하단에서 줄어드는 파란 선) */
+/* 원소 기호 — 기존 .tile-symbol 과 동일 */
+.fq-tile-sym {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 38px;
+  font-weight: 700;
+  color: #1e1e1e;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* 타임바 */
 .fq-tile::after {
   content: '';
   position: absolute;
@@ -290,51 +296,49 @@
   flex-shrink: 0;
 }
 
-/* 선택지 버튼 — 기존 원소 타일과 동일한 스타일 */
+/* 선택지 버튼 — 한글 이름 중심 */
 .fq-choice {
   background: var(--col, #f8fafc);
   border: 2px solid transparent;
-  /* 타일 키캡 그림자 */
-  box-shadow: 0 4px 0 color-mix(in srgb, var(--col, #d1d5db) 60%, #888 40%);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--col, #d1d5db) 55%, #999 45%);
   border-radius: 14px;
-  padding: 10px 8px 8px;
+  padding: 14px 8px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition: transform .08s, box-shadow .08s, border-color .15s, background .15s;
   position: relative;
   outline: none;
+  min-height: 72px;
 }
 .fq-choice:active {
   transform: translateY(4px);
-  box-shadow: 0 0 0 color-mix(in srgb, var(--col, #d1d5db) 60%, #888 40%);
+  box-shadow: 0 0 0 color-mix(in srgb, var(--col, #d1d5db) 55%, #999 45%);
 }
 
-.fq-ch-num {
-  font-size: 9px;
-  color: #94a3b8;
-  font-weight: 700;
-  align-self: flex-start;
-  margin-left: 2px;
-  line-height: 1;
-}
-.fq-ch-sym {
+/* 한글 이름 — 크고 선명하게 */
+.fq-ch-korean {
   font-family: 'Pretendard', sans-serif;
-  font-size: 30px;
+  font-size: clamp(15px, 4.5vw, 20px);
   font-weight: 700;
-  color: #1e1e1e;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-.fq-ch-name {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
+  color: #1e293b;
   line-height: 1.1;
+  text-align: center;
+  word-break: keep-all;
+}
+
+/* 원소 기호 힌트 — 작게 */
+.fq-ch-hint {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  line-height: 1;
 }
 
 /* 정답 */

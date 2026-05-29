@@ -152,10 +152,10 @@ export default function FallingQuiz({ onBack }) {
       <div className="fq-card">
         <div className="fq-splash-icon">🔬</div>
         <h1>원소 퀴즈</h1>
-        <p>떨어지는 원자 번호를 보고<br />올바른 원소 기호를 선택하세요!</p>
+        <p>내려오는 원소 기호를 보고<br />한글 이름을 맞추세요!</p>
         <ul className="fq-rules">
-          <li>⬇️ 원자 번호 타일이 아래로 내려와요</li>
-          <li>🔢 4개 보기 중 원소 기호를 선택</li>
+          <li>⬇️ 원소 기호 타일이 아래로 내려와요</li>
+          <li>🔤 4개 보기 중 한글 이름을 선택</li>
           <li>❤️ 3번 틀리거나 시간 초과 시 종료</li>
           <li>🔥 연속 정답으로 콤보 보너스!</li>
         </ul>
@@ -213,11 +213,11 @@ export default function FallingQuiz({ onBack }) {
           <div
             key={question.id}
             className="fq-tile"
-            style={{ '--fdur': `${fallDur}ms` }}
+            style={{ '--fdur': `${fallDur}ms`, '--col': question.el.color }}
             onAnimationEnd={handleTileEnd}
           >
-            <span className="fq-tile-num">{question.el.atomicNum}</span>
-            <span className="fq-tile-q">?</span>
+            <span className="fq-tile-atomic">{question.el.atomicNum}</span>
+            <span className="fq-tile-sym">{question.el.symbol}</span>
           </div>
         )}
         <div className="fq-danger-line" />
@@ -244,9 +244,8 @@ export default function FallingQuiz({ onBack }) {
               onClick={() => handleChoice(c.symbol)}
               onTouchStart={(e) => { e.preventDefault(); handleChoice(c.symbol); }}
             >
-              <span className="fq-ch-num">{c.atomicNum}</span>
-              <span className="fq-ch-sym">{c.symbol}</span>
-              <span className="fq-ch-name">{c.name}</span>
+              <span className="fq-ch-korean">{c.name}</span>
+              <span className="fq-ch-hint">{c.symbol}</span>
             </button>
           );
         })}
