@@ -36,9 +36,9 @@
 }
 
 .gs-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   width: 100%;
   max-width: 340px;
 }

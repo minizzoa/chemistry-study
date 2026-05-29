@@ -1,0 +1,360 @@
+/* ═══════════════════════════════════════════════
+   MoleculeQuiz — 분자 퀴즈 게임 스타일
+═══════════════════════════════════════════════ */
+
+/* ── Splash / Over ─────────────────────────── */
+.mq-splash {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #fef3c7 0%, #dcfce7 100%);
+  padding: 20px;
+}
+
+.mq-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px 24px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 8px 40px rgba(0,0,0,.10);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.mq-splash-icon { font-size: 56px; }
+
+.mq-card h1 {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1e293b;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.mq-card p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.mq-rules {
+  list-style: none;
+  padding: 12px 16px;
+  margin: 0;
+  background: #f8fafc;
+  border-radius: 14px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+}
+.mq-rules li { font-size: 13px; color: #475569; }
+
+.mq-btn-primary {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #f59e0b 0%, #10b981 100%);
+  color: #fff;
+  font-family: 'Pretendard', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 0 #d97706;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .08s, box-shadow .08s;
+}
+.mq-btn-primary:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #d97706;
+}
+
+.mq-btn-back {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  touch-action: manipulation;
+}
+
+.mq-rank {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ea580c;
+}
+
+.mq-stats {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+}
+.mq-stat {
+  flex: 1;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mq-stat span   { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.mq-stat strong { font-size: 26px; font-weight: 800; color: #1e293b; font-family: 'Pretendard', sans-serif; }
+
+/* ── Game screen ───────────────────────────── */
+.mq-game {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #fef3c7 0%, #dcfce7 100%);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* HUD */
+.mq-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0,0,0,.07);
+  flex-shrink: 0;
+}
+
+.mq-hud-score { display: flex; flex-direction: column; align-items: flex-start; }
+.mq-hud-val {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.mq-hud-lbl { font-size: 10px; color: #94a3b8; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; margin-top: 1px; }
+
+.mq-hud-mid   { display: flex; align-items: center; gap: 6px; }
+.mq-badge-lv  {
+  background: #f59e0b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-family: 'Pretendard', sans-serif;
+}
+.mq-badge-streak {
+  background: #f97316;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-family: 'Pretendard', sans-serif;
+}
+
+.mq-hud-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.mq-hud-lives  { font-size: 20px; letter-spacing: 2px; }
+.mq-mute-btn {
+  background: none; border: none;
+  font-size: 16px; cursor: pointer;
+  padding: 0; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.7;
+  transition: opacity .15s, transform .08s;
+  line-height: 1;
+}
+.mq-mute-btn:active { transform: scale(.85); opacity: 1; }
+
+/* ── Fall Area ─────────────────────────────── */
+.mq-fall-area {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  min-height: 280px;
+  max-height: 480px;
+}
+
+.mq-danger-line {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ef4444 0, #ef4444 8px,
+    transparent 8px, transparent 16px
+  );
+  opacity: .55;
+}
+
+/* ── Falling Tile ──────────────────────────── */
+@keyframes mq-fall {
+  from { top: -80px; }
+  to   { top: calc(100% - 74px); }
+}
+
+@keyframes mq-timebar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+.mq-tile {
+  position: absolute;
+  left: var(--x, 50%);
+  transform: translateX(-50%);
+  width: 64px;
+  height: 64px;
+  background: var(--col, #ffffff);
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  border-bottom: none;
+  box-shadow: 0 4px 0 #9aa3ad;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: mq-fall var(--fdur, 3s) linear forwards;
+  overflow: hidden;
+}
+
+/* 분자식 텍스트 */
+.mq-tile-formula {
+  font-family: 'Pretendard', sans-serif;
+  font-size: var(--fsize, 18px);
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.2;
+  text-align: center;
+  letter-spacing: -0.02em;
+  padding: 0 4px;
+  word-break: break-all;
+}
+
+/* 현재 타겟 타일 강조 */
+.mq-tile-target {
+  border-color: #f59e0b !important;
+  box-shadow: 0 4px 0 #d97706, 0 0 0 2px #fde68a !important;
+}
+
+/* 타임바 */
+.mq-tile::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 5px;
+  background: linear-gradient(90deg, #f59e0b, #10b981);
+  transform-origin: left center;
+  animation: mq-timebar var(--fdur, 3s) linear forwards;
+}
+
+/* ── Toast row ─────────────────────────────── */
+.mq-toast-row {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mq-toast {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 6px 18px;
+  border-radius: 99px;
+  white-space: nowrap;
+  animation: mq-pop .22s ease;
+}
+
+@keyframes mq-pop {
+  from { opacity: 0; transform: scale(.65); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.mq-toast-correct { background: #dcfce7; color: #15803d; }
+.mq-toast-wrong   { background: #fee2e2; color: #b91c1c; }
+.mq-toast-timeout { background: #fef3c7; color: #b45309; }
+
+/* ── 보기 4개 영역 ─────────────────────────── */
+.mq-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 14px 26px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.mq-choice-btn {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .1s, background .1s, transform .08s, box-shadow .08s;
+  box-shadow: 0 3px 0 #cbd5e1;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.mq-choice-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #cbd5e1;
+}
+
+.mq-choice-correct {
+  border-color: #22c55e !important;
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  box-shadow: 0 3px 0 #16a34a !important;
+  animation: mq-choice-pop .22s ease;
+}
+
+.mq-choice-wrong {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  box-shadow: 0 3px 0 #dc2626 !important;
+  animation: mq-choice-shake .28s ease;
+}
+
+.mq-choice-empty {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+.mq-choice-btn:disabled:not(.mq-choice-empty):not(.mq-choice-correct):not(.mq-choice-wrong) {
+  opacity: 0.6;
+}
+
+@keyframes mq-choice-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes mq-choice-shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-6px); }
+  75%       { transform: translateX(6px); }
+}

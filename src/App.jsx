@@ -7,6 +7,7 @@ import GameBoard from './components/GameBoard';
 import HUD from './components/HUD';
 import FallingQuiz from './games/FallingQuiz';
 import PeriodicQuiz from './games/PeriodicQuiz';
+import MoleculeQuiz from './games/MoleculeQuiz';
 import {
   playCompound, playInvalid, playTick,
   isMuted, toggleMute,
@@ -42,6 +43,11 @@ function GameSelector({ onSelect }) {
           <span className="gs-card-title">주기율표 퀴즈</span>
           <span className="gs-card-desc">주기율표에서 원소의<br />위치를 찾아보세요</span>
         </button>
+        <button className="gs-card" onClick={() => onSelect('molecule')}>
+          <span className="gs-card-icon">🧪</span>
+          <span className="gs-card-title">분자 퀴즈</span>
+          <span className="gs-card-desc">내려오는 분자식을 보고<br />이름을 맞춰보세요</span>
+        </button>
       </div>
     </div>
   );
@@ -51,9 +57,10 @@ function GameSelector({ onSelect }) {
 export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
 
-  if (selectedGame === 'quiz')     return <FallingQuiz  onBack={() => setSelectedGame(null)} />;
-  if (selectedGame === 'periodic') return <PeriodicQuiz onBack={() => setSelectedGame(null)} />;
-  if (selectedGame === null)       return <GameSelector onSelect={setSelectedGame} />;
+  if (selectedGame === 'quiz')      return <FallingQuiz  onBack={() => setSelectedGame(null)} />;
+  if (selectedGame === 'periodic')  return <PeriodicQuiz onBack={() => setSelectedGame(null)} />;
+  if (selectedGame === 'molecule')  return <MoleculeQuiz onBack={() => setSelectedGame(null)} />;
+  if (selectedGame === null)        return <GameSelector onSelect={setSelectedGame} />;
   return <PuzzleGame onBack={() => setSelectedGame(null)} />;
 }
 
