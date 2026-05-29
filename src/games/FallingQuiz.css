@@ -220,7 +220,7 @@
 /* 기존 원소 타일과 완전히 동일한 키캡 스타일 */
 .fq-tile {
   position: absolute;
-  left: 50%;
+  left: var(--x, 50%);
   transform: translateX(-50%);
   width: 96px;
   height: 96px;
@@ -235,7 +235,6 @@
   justify-content: center;
   animation: fq-fall var(--fdur, 3s) linear forwards;
   overflow: hidden;
-  position: absolute;
 }
 
 /* 원자 번호 — 기존 .tile-value 와 동일 */

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { QUIZ_ELEMENTS } from '../data/quizElements';
 import {
   playCorrect, playCombo, playWrong, playTimeout,
@@ -6,11 +6,18 @@ import {
 } from '../utils/sound';
 import './FallingQuiz.css';
 
-const TOTAL_LIVES = 3;
+const TOTAL_LIVES = 5;
+const MAX_TILES   = 5;            // 동시 최대 타일 수
+const SPEED_TICK  = 7000;         // ms마다 속도 1단계 증가
 
-// 타이핑 방식이므로 기본 낙하 시간을 더 여유 있게
-function getFallDuration(level) {
-  return Math.max(2200, 6500 - (level - 1) * 350);
+function getFallDuration(speed) {
+  // speed 0 → 7.2s, 이후 단계마다 -260ms, 최소 2.2s
+  return Math.max(2200, 7200 - speed * 260);
+}
+
+function getSpawnInterval(speed) {
+  // speed 0 → 2.8s, 이후 단계마다 -180ms, 최소 1.1s
+  return Math.max(1100, 2800 - speed * 180);
 }
 
 function calcPoints(level, streak) {
@@ -25,140 +32,168 @@ export default function FallingQuiz({ onBack }) {
   const [lives, setLives]             = useState(TOTAL_LIVES);
   const [score, setScore]             = useState(0);
   const [streak, setStreak]           = useState(0);
-  const [level, setLevel]             = useState(1);
-  const [question, setQuestion]       = useState(null);   // { el, id }
-  const [tileOn, setTileOn]           = useState(false);
+  const [speed, setSpeed]             = useState(0);
+  const [tiles, setTiles]             = useState([]);  // 낙하 중인 타일 배열
   const [inputValue, setInputValue]   = useState('');
-  const [inputStatus, setInputStatus] = useState(null);   // null | 'correct' | 'wrong'
+  const [inputStatus, setInputStatus] = useState(null); // null|'correct'|'wrong'
   const [toast, setToast]             = useState(null);
 
-  const doneRef  = useRef(false);
-  const elemRef  = useRef(null);
-  const livesRef = useRef(TOTAL_LIVES);
-  const levelRef = useRef(1);
-  const scoreRef = useRef(0);
-  const strRef   = useRef(0);
-  const inputRef = useRef(null);
+  // refs — 콜백 내 stale closure 방지
+  const livesRef  = useRef(TOTAL_LIVES);
+  const scoreRef  = useRef(0);
+  const strRef    = useRef(0);
+  const speedRef  = useRef(0);
+  const activeRef = useRef(false);   // 게임 진행 중 여부
+  const inputRef  = useRef(null);
 
-  /* ─── 다음 문제 ─────────────────────────────── */
-  const askNext = useCallback(() => {
-    setTimeout(() => {
-      if (livesRef.current <= 0) return;
-      const el = QUIZ_ELEMENTS[Math.floor(Math.random() * QUIZ_ELEMENTS.length)];
-      elemRef.current = el;
-      doneRef.current = false;
-      setInputValue('');
-      setInputStatus(null);
-      setToast(null);
-      setQuestion({ el, id: Date.now() });
-      setTileOn(true);
-      // 입력창 포커스 유지
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }, 950);
+  // tiles state를 ref로 동기화 (매 렌더마다 갱신)
+  const tilesRef = useRef([]);
+  tilesRef.current = tiles;
+
+  /* ─── 타일 생성 ─────────────────────────── */
+  const spawnTile = useCallback(() => {
+    if (!activeRef.current) return;
+
+    // 현재 화면에 있는 원소와 중복 최소화
+    const existing = new Set(tilesRef.current.map(t => t.el.symbol));
+    const pool = QUIZ_ELEMENTS.filter(e => !existing.has(e.symbol));
+    const source = pool.length > 0 ? pool : QUIZ_ELEMENTS;
+    const el  = source[Math.floor(Math.random() * source.length)];
+
+    const dur = getFallDuration(speedRef.current);
+    const x   = 12 + Math.random() * 68; // 12 % ~ 80 % (타일 너비 고려)
+
+    setTiles(prev =>
+      prev.length >= MAX_TILES
+        ? prev
+        : [...prev, { el, id: performance.now() + Math.random(), dur, x }]
+    );
   }, []);
 
-  /* ─── 라운드 결과 처리 ──────────────────────── */
-  const endRound = useCallback((isCorrect) => {
-    setTileOn(false);
+  /* ─── 스폰 타이머 (재귀 setTimeout) ──────── */
+  useEffect(() => {
+    if (phase !== 'playing') return;
 
-    if (isCorrect) {
-      const str = strRef.current + 1;
-      const lvl = levelRef.current;
-      const pts = calcPoints(lvl, str);
-      strRef.current = str;
-      setStreak(str);
+    // 게임 시작 시 즉시 첫 타일 생성
+    spawnTile();
 
-      const newScore = scoreRef.current + pts;
-      scoreRef.current = newScore;
-      setScore(newScore);
-
-      const oldLevel = levelRef.current;
-      const newLevel = Math.floor(newScore / 100) + 1;
-      levelRef.current = newLevel;
-      setLevel(newLevel);
-
-      if (newLevel > oldLevel) playLevelUp();
-      else if (str >= 3)       playCombo();
-      else                     playCorrect();
-
-      setToast({ text: `+${pts}${str >= 3 ? ` 🔥×${str}` : ''}`, type: 'correct' });
-      askNext();
-
-    } else {
-      strRef.current = 0;
-      setStreak(0);
-      const newLives = livesRef.current - 1;
-      livesRef.current = newLives;
-      setLives(newLives);
-
-      playWrong();
-      setToast({ text: `정답: ${elemRef.current?.name}`, type: 'wrong' });
-
-      if (newLives <= 0) {
-        setTimeout(() => { playGameOver(); setPhase('over'); }, 950);
-      } else {
-        askNext();
-      }
+    let tid;
+    function schedule() {
+      tid = setTimeout(() => {
+        spawnTile();
+        schedule();
+      }, getSpawnInterval(speedRef.current));
     }
-  }, [askNext]);
+    schedule();
 
-  /* ─── 답 제출 ───────────────────────────────── */
-  const handleSubmit = useCallback(() => {
-    if (doneRef.current) return;
-    const answer = inputValue.trim();
-    if (!answer) return;
+    return () => clearTimeout(tid);
+  }, [phase, spawnTile]);
 
-    doneRef.current = true;
-    const isCorrect = answer === elemRef.current?.name;
-    setInputStatus(isCorrect ? 'correct' : 'wrong');
-    endRound(isCorrect);
-  }, [inputValue, endRound]);
+  /* ─── 속도 증가 타이머 ──────────────────── */
+  useEffect(() => {
+    if (phase !== 'playing') return;
 
-  /* ─── 시간 초과 ─────────────────────────────── */
-  const handleTileEnd = useCallback(() => {
-    if (doneRef.current) return;
-    doneRef.current = true;
+    const timer = setInterval(() => {
+      setSpeed(s => {
+        const ns = s + 1;
+        speedRef.current = ns;
+        return ns;
+      });
+    }, SPEED_TICK);
+
+    return () => clearInterval(timer);
+  }, [phase]);
+
+  /* ─── 타일이 바닥 도달 → 생명 감소 ────── */
+  const handleTileEnd = useCallback((tileId, el) => {
+    if (!activeRef.current) return;
+
+    setTiles(prev => prev.filter(t => t.id !== tileId));
 
     strRef.current = 0;
     setStreak(0);
+
     const newLives = livesRef.current - 1;
     livesRef.current = newLives;
     setLives(newLives);
 
     playTimeout();
-    setInputStatus('wrong');
-    setToast({ text: `⏰ 정답: ${elemRef.current?.name}`, type: 'timeout' });
-    setTileOn(false);
+    setToast({ text: `⏰ ${el.name} 놓침!`, type: 'timeout', key: Date.now() });
 
     if (newLives <= 0) {
-      setTimeout(() => { playGameOver(); setPhase('over'); }, 950);
-    } else {
-      askNext();
+      activeRef.current = false;
+      setTiles([]);
+      setTimeout(() => { playGameOver(); setPhase('over'); }, 500);
     }
-  }, [askNext]);
+  }, []);
 
-  /* ─── 시작 / 재시작 ─────────────────────────── */
+  /* ─── 입력 제출 → 일치 타일 제거 ───────── */
+  const handleSubmit = useCallback(() => {
+    const answer = inputValue.trim();
+    if (!answer) return;
+
+    // 일치하는 타일 중 가장 오래된 것(= 가장 아래 있는 것) 제거
+    const matchIdx = tilesRef.current.findIndex(t => t.el.name === answer);
+
+    if (matchIdx !== -1) {
+      const matched = tilesRef.current[matchIdx];
+      setTiles(prev => prev.filter(t => t.id !== matched.id));
+
+      const lvl = Math.floor(scoreRef.current / 100) + 1;
+      const str = strRef.current + 1;
+      const pts = calcPoints(lvl, str);
+
+      strRef.current = str;
+      setStreak(str);
+
+      const newScore = scoreRef.current + pts;
+      const oldLevel = Math.floor(scoreRef.current / 100) + 1;
+      const newLevel = Math.floor(newScore / 100) + 1;
+      scoreRef.current = newScore;
+      setScore(newScore);
+
+      if (newLevel > oldLevel)  playLevelUp();
+      else if (str >= 3)        playCombo();
+      else                      playCorrect();
+
+      setInputStatus('correct');
+      setToast({ text: `+${pts}${str >= 3 ? ` 🔥×${str}` : ''}`, type: 'correct', key: Date.now() });
+      setInputValue('');
+      setTimeout(() => {
+        setInputStatus(null);
+        inputRef.current?.focus();
+      }, 380);
+
+    } else {
+      // 오답 — 생명 소모 없음, 입력창만 흔들림
+      playWrong();
+      setInputStatus('wrong');
+      setTimeout(() => {
+        setInputStatus(null);
+        setInputValue('');
+        inputRef.current?.focus();
+      }, 380);
+    }
+  }, [inputValue]);
+
+  /* ─── 시작 / 재시작 ─────────────────────── */
   const startGame = () => {
-    scoreRef.current = 0;          setScore(0);
     livesRef.current = TOTAL_LIVES; setLives(TOTAL_LIVES);
-    strRef.current = 0;            setStreak(0);
-    levelRef.current = 1;          setLevel(1);
-
-    const el = QUIZ_ELEMENTS[Math.floor(Math.random() * QUIZ_ELEMENTS.length)];
-    elemRef.current = el;
-    doneRef.current = false;
+    scoreRef.current = 0;           setScore(0);
+    strRef.current   = 0;           setStreak(0);
+    speedRef.current = 0;           setSpeed(0);
+    setTiles([]);
     setInputValue('');
     setInputStatus(null);
     setToast(null);
-    setQuestion({ el, id: Date.now() });
-    setTileOn(true);
+    activeRef.current = true;
     setPhase('playing');
     setTimeout(() => inputRef.current?.focus(), 200);
   };
 
-  const fallDur = getFallDuration(level);
+  const level = Math.floor(score / 100) + 1;
 
-  /* ─── 스플래시 ───────────────────────────────── */
+  /* ─── 스플래시 ──────────────────────────── */
   if (phase === 'splash') return (
     <div className="fq-splash">
       <div className="fq-card">
@@ -166,9 +201,10 @@ export default function FallingQuiz({ onBack }) {
         <h1>원소 퀴즈</h1>
         <p>내려오는 원소 기호를 보고<br />한글 이름을 입력하세요!</p>
         <ul className="fq-rules">
-          <li>⬇️ 원소 기호 타일이 아래로 내려와요</li>
-          <li>⌨️ 한글 이름을 입력하고 확인</li>
-          <li>❤️ 3번 틀리거나 시간 초과 시 종료</li>
+          <li>⬇️ 여러 원소 타일이 동시에 내려와요</li>
+          <li>⌨️ 한글 이름을 입력하면 해당 타일 제거</li>
+          <li>❤️ 타일이 바닥에 닿으면 생명 감소 (5개)</li>
+          <li>⚡ 시간이 지날수록 점점 빨라져요!</li>
           <li>🔥 연속 정답으로 콤보 보너스!</li>
         </ul>
         <button className="fq-btn-primary" onClick={startGame}>시작하기</button>
@@ -177,11 +213,11 @@ export default function FallingQuiz({ onBack }) {
     </div>
   );
 
-  /* ─── 게임 오버 ──────────────────────────────── */
+  /* ─── 게임 오버 ─────────────────────────── */
   if (phase === 'over') {
-    const rank = score >= 300 ? '🏆 원소 박사'
-               : score >= 150 ? '🥇 원소 전문가'
-               : score >= 60  ? '🥈 원소 학생'
+    const rank = score >= 500 ? '🏆 원소 박사'
+               : score >= 250 ? '🥇 원소 전문가'
+               : score >= 100 ? '🥈 원소 학생'
                :                '🥉 초보 연구원';
     return (
       <div className="fq-splash">
@@ -200,7 +236,7 @@ export default function FallingQuiz({ onBack }) {
     );
   }
 
-  /* ─── 플레이 화면 ────────────────────────────── */
+  /* ─── 플레이 화면 ───────────────────────── */
   return (
     <div className="fq-game">
 
@@ -230,24 +266,28 @@ export default function FallingQuiz({ onBack }) {
 
       {/* 낙하 영역 */}
       <div className="fq-fall-area">
-        {question && tileOn && (
+        {tiles.map(tile => (
           <div
-            key={question.id}
+            key={tile.id}
             className="fq-tile"
-            style={{ '--fdur': `${fallDur}ms`, '--col': question.el.color }}
-            onAnimationEnd={handleTileEnd}
+            style={{
+              '--fdur': `${tile.dur}ms`,
+              '--col':  tile.el.color,
+              '--x':    `${tile.x}%`,
+            }}
+            onAnimationEnd={() => handleTileEnd(tile.id, tile.el)}
           >
-            <span className="fq-tile-atomic">{question.el.atomicNum}</span>
-            <span className="fq-tile-sym">{question.el.symbol}</span>
+            <span className="fq-tile-atomic">{tile.el.atomicNum}</span>
+            <span className="fq-tile-sym">{tile.el.symbol}</span>
           </div>
-        )}
+        ))}
         <div className="fq-danger-line" />
       </div>
 
       {/* 토스트 */}
       <div className="fq-toast-row">
         {toast && (
-          <span key={toast.text + toast.type} className={`fq-toast fq-toast-${toast.type}`}>
+          <span key={toast.key} className={`fq-toast fq-toast-${toast.type}`}>
             {toast.text}
           </span>
         )}
