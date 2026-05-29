@@ -118,7 +118,6 @@ export default function FallingQuiz({ onBack }) {
     setLives(newLives);
 
     playTimeout();
-    setToast({ text: `⏰ ${el.name} 놓침!`, type: 'timeout', key: Date.now() });
 
     if (newLives <= 0) {
       activeRef.current = false;
