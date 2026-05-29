@@ -188,8 +188,8 @@
   position: relative;
   flex: 1;
   overflow: hidden;
-  min-height: 260px;
-  max-height: 400px;
+  min-height: 280px;
+  max-height: 480px;
 }
 
 /* 위험선 (빨간 점선) */
@@ -299,77 +299,102 @@
 .fq-toast-wrong   { background: #fee2e2; color: #b91c1c; }
 .fq-toast-timeout { background: #fef3c7; color: #b45309; }
 
-/* ── Choices ───────────────────────────────── */
-.fq-choices {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  padding: 10px 14px 24px;
+/* ── Input Area ────────────────────────────── */
+.fq-input-area {
+  padding: 12px 16px 28px;
   background: #ffffff;
   border-top: 1px solid #f1f5f9;
   flex-shrink: 0;
 }
 
-/* 선택지 버튼 — 한글 이름 중심 */
-.fq-choice {
-  background: var(--col, #f8fafc);
-  border: 2px solid transparent;
-  box-shadow: 0 4px 0 color-mix(in srgb, var(--col, #d1d5db) 55%, #999 45%);
-  border-radius: 14px;
-  padding: 14px 8px 12px;
+.fq-input-row {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform .08s, box-shadow .08s, border-color .15s, background .15s;
-  position: relative;
-  outline: none;
-  min-height: 72px;
-}
-.fq-choice:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 color-mix(in srgb, var(--col, #d1d5db) 55%, #999 45%);
+  gap: 10px;
+  align-items: stretch;
 }
 
-/* 한글 이름 — 크고 선명하게 */
-.fq-ch-korean {
+/* 텍스트 입력창 */
+.fq-input {
+  flex: 1;
   font-family: 'Pretendard', sans-serif;
-  font-size: clamp(15px, 4.5vw, 20px);
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.1;
-  text-align: center;
-  word-break: keep-all;
-}
-
-/* 원소 기호 힌트 — 작게 */
-.fq-ch-hint {
-  font-family: 'Pretendard', sans-serif;
-  font-size: 11px;
+  font-size: 20px;
   font-weight: 600;
+  color: #1e293b;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  outline: none;
+  min-width: 0;
+  user-select: auto;
+  -webkit-user-select: auto;
+  touch-action: auto;
+  transition: border-color .15s, background .15s;
+}
+
+.fq-input::placeholder {
   color: #94a3b8;
-  line-height: 1;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.fq-input:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
 }
 
 /* 정답 */
-.fq-choice-correct {
+.fq-input-correct {
   border-color: #22c55e !important;
   background: #f0fdf4 !important;
-  box-shadow: 0 4px 0 #15803d !important;
+  animation: fq-input-pop .22s ease;
 }
+
 /* 오답 */
-.fq-choice-wrong {
+.fq-input-wrong {
   border-color: #ef4444 !important;
   background: #fef2f2 !important;
-  box-shadow: 0 4px 0 #b91c1c !important;
+  animation: fq-input-shake .28s ease;
 }
-/* 시간 초과 시 정답 표시 */
-.fq-choice-reveal {
-  border-color: #3b82f6 !important;
-  background: #eff6ff !important;
-  box-shadow: 0 4px 0 #1d4ed8 !important;
+
+@keyframes fq-input-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fq-input-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  75%      { transform: translateX(6px); }
+}
+
+/* 확인 버튼 */
+.fq-submit-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+  color: #fff;
+  font-family: 'Pretendard', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 0 22px;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 4px 0 #1d4ed8;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform .08s, box-shadow .08s, opacity .1s;
+}
+
+.fq-submit-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #1d4ed8;
+}
+
+.fq-submit-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
 }

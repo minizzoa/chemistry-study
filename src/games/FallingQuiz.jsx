@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { QUIZ_ELEMENTS, pickChoices } from '../data/quizElements';
+import { QUIZ_ELEMENTS } from '../data/quizElements';
 import {
   playCorrect, playCombo, playWrong, playTimeout,
   playGameOver, playLevelUp, isMuted, toggleMute,
@@ -8,12 +8,11 @@ import './FallingQuiz.css';
 
 const TOTAL_LIVES = 3;
 
-// 레벨에 따라 낙하 속도 계산 (ms)
+// 타이핑 방식이므로 기본 낙하 시간을 더 여유 있게
 function getFallDuration(level) {
-  return Math.max(1500, 4800 - (level - 1) * 280);
+  return Math.max(2200, 6500 - (level - 1) * 350);
 }
 
-// 점수 계산: 레벨 + 콤보 보너스
 function calcPoints(level, streak) {
   const base  = 10 + (level - 1) * 3;
   const combo = streak >= 3 ? Math.floor(streak / 3) * 5 : 0;
@@ -21,49 +20,51 @@ function calcPoints(level, streak) {
 }
 
 export default function FallingQuiz({ onBack }) {
-  const [phase, setPhase]         = useState('splash'); // splash | playing | over
-  const [muted, setMuted]         = useState(isMuted());
-  const [lives, setLives]         = useState(TOTAL_LIVES);
-  const [score, setScore]         = useState(0);
-  const [streak, setStreak]       = useState(0);
-  const [level, setLevel]         = useState(1);
-  const [question, setQuestion]   = useState(null);   // { el, ch, id }
-  const [tileOn, setTileOn]       = useState(false);
-  const [choiceState, setChoiceState] = useState({}); // { sym: 'correct'|'wrong'|'reveal' }
-  const [toast, setToast]         = useState(null);   // { text, type }
+  const [phase, setPhase]             = useState('splash');
+  const [muted, setMuted]             = useState(isMuted());
+  const [lives, setLives]             = useState(TOTAL_LIVES);
+  const [score, setScore]             = useState(0);
+  const [streak, setStreak]           = useState(0);
+  const [level, setLevel]             = useState(1);
+  const [question, setQuestion]       = useState(null);   // { el, id }
+  const [tileOn, setTileOn]           = useState(false);
+  const [inputValue, setInputValue]   = useState('');
+  const [inputStatus, setInputStatus] = useState(null);   // null | 'correct' | 'wrong'
+  const [toast, setToast]             = useState(null);
 
-  // refs — stale closure 방지
   const doneRef  = useRef(false);
   const elemRef  = useRef(null);
   const livesRef = useRef(TOTAL_LIVES);
   const levelRef = useRef(1);
   const scoreRef = useRef(0);
   const strRef   = useRef(0);
+  const inputRef = useRef(null);
 
-  /* ─── 다음 문제 시작 ─────────────────────────────── */
+  /* ─── 다음 문제 ─────────────────────────────── */
   const askNext = useCallback(() => {
     setTimeout(() => {
       if (livesRef.current <= 0) return;
       const el = QUIZ_ELEMENTS[Math.floor(Math.random() * QUIZ_ELEMENTS.length)];
-      const ch = pickChoices(el, QUIZ_ELEMENTS);
       elemRef.current = el;
       doneRef.current = false;
-      setChoiceState({});
+      setInputValue('');
+      setInputStatus(null);
       setToast(null);
-      setQuestion({ el, ch, id: Date.now() });
+      setQuestion({ el, id: Date.now() });
       setTileOn(true);
+      // 입력창 포커스 유지
+      setTimeout(() => inputRef.current?.focus(), 80);
     }, 950);
   }, []);
 
-  /* ─── 라운드 결과 처리 ───────────────────────────── */
-  const endRound = useCallback((isCorrect, wrongSym) => {
+  /* ─── 라운드 결과 처리 ──────────────────────── */
+  const endRound = useCallback((isCorrect) => {
     setTileOn(false);
 
     if (isCorrect) {
       const str = strRef.current + 1;
       const lvl = levelRef.current;
       const pts = calcPoints(lvl, str);
-
       strRef.current = str;
       setStreak(str);
 
@@ -76,30 +77,22 @@ export default function FallingQuiz({ onBack }) {
       levelRef.current = newLevel;
       setLevel(newLevel);
 
-      // 소리: 레벨업 > 콤보 > 정답 순 우선순위
-      if (newLevel > oldLevel)  playLevelUp();
-      else if (str >= 3)        playCombo();
-      else                      playCorrect();
+      if (newLevel > oldLevel) playLevelUp();
+      else if (str >= 3)       playCombo();
+      else                     playCorrect();
 
-      setChoiceState({ [elemRef.current.symbol]: 'correct' });
       setToast({ text: `+${pts}${str >= 3 ? ` 🔥×${str}` : ''}`, type: 'correct' });
       askNext();
 
     } else {
       strRef.current = 0;
       setStreak(0);
-
       const newLives = livesRef.current - 1;
       livesRef.current = newLives;
       setLives(newLives);
 
       playWrong();
-
-      const cs = {};
-      if (wrongSym) cs[wrongSym] = 'wrong';
-      cs[elemRef.current.symbol] = 'reveal';
-      setChoiceState(cs);
-      setToast({ text: `${elemRef.current.symbol} — ${elemRef.current.name}`, type: 'wrong' });
+      setToast({ text: `정답: ${elemRef.current?.name}`, type: 'wrong' });
 
       if (newLives <= 0) {
         setTimeout(() => { playGameOver(); setPhase('over'); }, 950);
@@ -109,14 +102,19 @@ export default function FallingQuiz({ onBack }) {
     }
   }, [askNext]);
 
-  /* ─── 선택지 클릭 ────────────────────────────────── */
-  const handleChoice = useCallback((sym) => {
+  /* ─── 답 제출 ───────────────────────────────── */
+  const handleSubmit = useCallback(() => {
     if (doneRef.current) return;
-    doneRef.current = true;
-    endRound(sym === elemRef.current.symbol, sym);
-  }, [endRound]);
+    const answer = inputValue.trim();
+    if (!answer) return;
 
-  /* ─── 타일 바닥 도달 (시간 초과) ────────────────── */
+    doneRef.current = true;
+    const isCorrect = answer === elemRef.current?.name;
+    setInputStatus(isCorrect ? 'correct' : 'wrong');
+    endRound(isCorrect);
+  }, [inputValue, endRound]);
+
+  /* ─── 시간 초과 ─────────────────────────────── */
   const handleTileEnd = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
@@ -128,8 +126,8 @@ export default function FallingQuiz({ onBack }) {
     setLives(newLives);
 
     playTimeout();
-    setChoiceState({ [elemRef.current.symbol]: 'reveal' });
-    setToast({ text: '⏰ 시간 초과!', type: 'timeout' });
+    setInputStatus('wrong');
+    setToast({ text: `⏰ 정답: ${elemRef.current?.name}`, type: 'timeout' });
     setTileOn(false);
 
     if (newLives <= 0) {
@@ -139,37 +137,37 @@ export default function FallingQuiz({ onBack }) {
     }
   }, [askNext]);
 
-  /* ─── 게임 시작 / 재시작 ─────────────────────────── */
+  /* ─── 시작 / 재시작 ─────────────────────────── */
   const startGame = () => {
-    scoreRef.current = 0;  setScore(0);
+    scoreRef.current = 0;          setScore(0);
     livesRef.current = TOTAL_LIVES; setLives(TOTAL_LIVES);
-    strRef.current = 0;    setStreak(0);
-    levelRef.current = 1;  setLevel(1);
+    strRef.current = 0;            setStreak(0);
+    levelRef.current = 1;          setLevel(1);
 
     const el = QUIZ_ELEMENTS[Math.floor(Math.random() * QUIZ_ELEMENTS.length)];
-    const ch = pickChoices(el, QUIZ_ELEMENTS);
     elemRef.current = el;
     doneRef.current = false;
-    setChoiceState({});
+    setInputValue('');
+    setInputStatus(null);
     setToast(null);
-    setQuestion({ el, ch, id: Date.now() });
+    setQuestion({ el, id: Date.now() });
     setTileOn(true);
     setPhase('playing');
+    setTimeout(() => inputRef.current?.focus(), 200);
   };
 
-  /* ─── 낙하 시간 ──────────────────────────────────── */
   const fallDur = getFallDuration(level);
 
-  /* ─── 스플래시 ───────────────────────────────────── */
+  /* ─── 스플래시 ───────────────────────────────── */
   if (phase === 'splash') return (
     <div className="fq-splash">
       <div className="fq-card">
         <div className="fq-splash-icon">🔬</div>
         <h1>원소 퀴즈</h1>
-        <p>내려오는 원소 기호를 보고<br />한글 이름을 맞추세요!</p>
+        <p>내려오는 원소 기호를 보고<br />한글 이름을 입력하세요!</p>
         <ul className="fq-rules">
           <li>⬇️ 원소 기호 타일이 아래로 내려와요</li>
-          <li>🔤 4개 보기 중 한글 이름을 선택</li>
+          <li>⌨️ 한글 이름을 입력하고 확인</li>
           <li>❤️ 3번 틀리거나 시간 초과 시 종료</li>
           <li>🔥 연속 정답으로 콤보 보너스!</li>
         </ul>
@@ -179,7 +177,7 @@ export default function FallingQuiz({ onBack }) {
     </div>
   );
 
-  /* ─── 게임 오버 ──────────────────────────────────── */
+  /* ─── 게임 오버 ──────────────────────────────── */
   if (phase === 'over') {
     const rank = score >= 300 ? '🏆 원소 박사'
                : score >= 150 ? '🥇 원소 전문가'
@@ -202,7 +200,7 @@ export default function FallingQuiz({ onBack }) {
     );
   }
 
-  /* ─── 플레이 화면 ─────────────────────────────────── */
+  /* ─── 플레이 화면 ────────────────────────────── */
   return (
     <div className="fq-game">
 
@@ -246,7 +244,7 @@ export default function FallingQuiz({ onBack }) {
         <div className="fq-danger-line" />
       </div>
 
-      {/* 토스트 메시지 */}
+      {/* 토스트 */}
       <div className="fq-toast-row">
         {toast && (
           <span key={toast.text + toast.type} className={`fq-toast fq-toast-${toast.type}`}>
@@ -255,23 +253,30 @@ export default function FallingQuiz({ onBack }) {
         )}
       </div>
 
-      {/* 선택지 4개 */}
-      <div className="fq-choices">
-        {question?.ch.map(c => {
-          const st = choiceState[c.symbol];
-          return (
-            <button
-              key={c.symbol}
-              className={`fq-choice${st ? ' fq-choice-' + st : ''}`}
-              style={{ '--col': c.color }}
-              onClick={() => handleChoice(c.symbol)}
-              onTouchStart={(e) => { e.preventDefault(); handleChoice(c.symbol); }}
-            >
-              <span className="fq-ch-korean">{c.name}</span>
-              <span className="fq-ch-hint">{c.symbol}</span>
-            </button>
-          );
-        })}
+      {/* 입력창 */}
+      <div className="fq-input-area">
+        <div className="fq-input-row">
+          <input
+            ref={inputRef}
+            className={`fq-input${inputStatus ? ' fq-input-' + inputStatus : ''}`}
+            type="text"
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
+            placeholder="한글 이름 입력 (예: 산소)"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+          <button
+            className="fq-submit-btn"
+            onClick={handleSubmit}
+            disabled={!inputValue.trim()}
+          >
+            확인
+          </button>
+        </div>
       </div>
     </div>
   );
