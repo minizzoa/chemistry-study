@@ -5,13 +5,58 @@ import {
 } from './utils/gameUtils';
 import GameBoard from './components/GameBoard';
 import HUD from './components/HUD';
+import FallingQuiz from './games/FallingQuiz';
 import './App.css';
 
 const ROWS = 7;
 const COLS = 5;
 const GAME_DURATION = 180;
 
+/* ── 게임 선택 화면 ──────────────────────────────────── */
+function GameSelector({ onSelect }) {
+  return (
+    <div className="gs-wrap">
+      <div className="gs-header">
+        <span className="gs-logo">⚗️</span>
+        <h1>화학 게임</h1>
+        <p>플레이할 게임을 선택하세요</p>
+      </div>
+      <div className="gs-grid">
+        <button className="gs-card" onClick={() => onSelect('puzzle')}>
+          <span className="gs-card-icon">🧩</span>
+          <span className="gs-card-title">화학 퍼즐</span>
+          <span className="gs-card-desc">원소 타일을 조합해<br />화합물을 완성하세요</span>
+        </button>
+        <button className="gs-card" onClick={() => onSelect('quiz')}>
+          <span className="gs-card-icon">⬇️</span>
+          <span className="gs-card-title">원소 퀴즈</span>
+          <span className="gs-card-desc">떨어지는 원자 번호를 보고<br />원소 기호를 맞추세요</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── 메인 앱 ─────────────────────────────────────────── */
 export default function App() {
+  const [selectedGame, setSelectedGame] = useState(null);
+
+  /* 퀴즈 게임 */
+  if (selectedGame === 'quiz') {
+    return <FallingQuiz onBack={() => setSelectedGame(null)} />;
+  }
+
+  /* 게임 선택 */
+  if (selectedGame === null) {
+    return <GameSelector onSelect={setSelectedGame} />;
+  }
+
+  /* 화학 퍼즐 */
+  return <PuzzleGame onBack={() => setSelectedGame(null)} />;
+}
+
+/* ── 화학 퍼즐 게임 (기존 코드) ─────────────────────── */
+function PuzzleGame({ onBack }) {
   const [grid, setGrid] = useState(() => generateGrid(ROWS, COLS));
   const [selection, setSelection] = useState([]);
   const [score, setScore] = useState(0);
@@ -45,7 +90,6 @@ export default function App() {
     if (!started || gameOver) return;
     if (grid[row][col].type === 'compound') return;
 
-    // Debounce: same tile tapped twice within 200 ms → ignore (prevents accidental double-tap deselect)
     const now = Date.now();
     const key = `${row}-${col}`;
     if (lastTileRef.current.key === key && now - lastTileRef.current.time < 200) return;
@@ -54,10 +98,8 @@ export default function App() {
     setSelection(prev => {
       const existingIdx = prev.findIndex(p => p.row === row && p.col === col);
       if (existingIdx !== -1) {
-        // 이미 선택된 타일: 해당 타일만 토글 해제 (나머지 선택은 유지)
         return prev.filter((_, i) => i !== existingIdx);
       }
-      // 거리 제한 없음: 어디든 선택 가능
       return [...prev, { row, col }];
     });
   }, [started, gameOver, grid]);
@@ -95,31 +137,35 @@ export default function App() {
     setTimeLeft(GAME_DURATION);
     setGameOver(false);
     setMessage(null);
+    setStarted(false);
   };
 
   const currentAtoms = selection.length > 0 ? getSelectionAtoms(selection, grid) : null;
   const currentFormula = currentAtoms ? atomsToFormula(currentAtoms) : null;
 
+  /* 시작 전 스플래시 */
   if (!started) {
     return (
       <div className="splash">
         <div className="splash-content">
           <div className="splash-icon">⚗️</div>
           <h1>화학 퍼즐</h1>
-          <p>인접한 원소 타일을 선택해서<br />화합물을 완성하세요!</p>
+          <p>원소 타일을 선택해서<br />화합물을 완성하세요!</p>
           <div className="rules">
-            <div className="rule-item">🔗 인접한 타일을 순서대로 클릭</div>
+            <div className="rule-item">🔗 원소 타일을 순서대로 클릭</div>
             <div className="rule-item">🧪 유효한 화합물이면 점수 획득</div>
             <div className="rule-item">⏱️ 3분 안에 최대한 많이!</div>
           </div>
           <button className="start-btn" onClick={() => setStarted(true)}>
             게임 시작
           </button>
+          <button className="gs-back-link" onClick={onBack}>← 게임 선택</button>
         </div>
       </div>
     );
   }
 
+  /* 게임 오버 */
   if (gameOver) {
     const rank = score >= 300 ? '🏆 화학 박사' : score >= 150 ? '🥇 화학 전문가' : score >= 60 ? '🥈 화학 학생' : '🥉 초보 연구원';
     return (
@@ -135,11 +181,13 @@ export default function App() {
           <button className="start-btn" onClick={handleReset}>
             다시 하기
           </button>
+          <button className="gs-back-link" onClick={onBack}>← 게임 선택</button>
         </div>
       </div>
     );
   }
 
+  /* 게임 플레이 */
   return (
     <div className="game-wrap">
       <HUD score={score} timeLeft={timeLeft} foundCount={foundCount} />

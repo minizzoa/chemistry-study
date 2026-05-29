@@ -1,3 +1,97 @@
+/* ───────────────── Game Selector ───────────────── */
+.gs-wrap {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #dbeafe 0%, #dcfce7 100%);
+  padding: 28px 20px;
+  gap: 28px;
+}
+
+.gs-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.gs-logo { font-size: 56px; }
+
+.gs-header h1 {
+  font-size: 32px;
+  font-weight: 900;
+  color: #1e293b;
+  letter-spacing: -0.03em;
+  margin: 0;
+  font-family: 'Pretendard', sans-serif;
+}
+
+.gs-header p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.gs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.gs-card {
+  background: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 0 #cbd5e1, 0 2px 16px rgba(0,0,0,.08);
+  transition: transform .08s, box-shadow .08s;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gs-card:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #cbd5e1;
+}
+
+.gs-card-icon { font-size: 40px; }
+
+.gs-card-title {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -0.02em;
+}
+
+.gs-card-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.gs-back-link {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px;
+  margin-top: 4px;
+  touch-action: manipulation;
+}
+
 /* ───────────────── Layout ───────────────── */
 .game-wrap {
   display: flex;
