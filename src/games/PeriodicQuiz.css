@@ -466,3 +466,122 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,.4); }
   50%       { box-shadow: 0 0 0 4px rgba(59,130,246,.0); }
 }
+
+/* ═══════════════════════════════════════════════
+   모바일 세로(portrait) → 가로(landscape) 자동 회전
+   포트레이트 상태에서 90° 회전시켜 항상 가로 레이아웃
+═══════════════════════════════════════════════ */
+@media screen and (orientation: portrait) and (max-width: 1024px) {
+
+  /* 전체 화면을 90° 회전하여 가로 표시 */
+  .pq-splash,
+  .pq-game {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vh !important;      /* 가로 = 세로 화면 높이 */
+    min-height: unset !important;
+    height: 100vw !important;     /* 세로 = 세로 화면 너비 */
+    transform-origin: top left;
+    transform: rotate(90deg) translateY(-100vw);
+    overflow: hidden;
+    z-index: 100;
+  }
+
+  /* 스플래시/오버 카드: 가로 공간 활용해 좌우 배치 */
+  .pq-splash {
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 12px;
+  }
+
+  .pq-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    padding: 16px 20px !important;
+    gap: 10px !important;
+    align-items: flex-start;
+    justify-content: center;
+    max-height: 100vw;
+    overflow-y: auto;
+  }
+
+  .pq-splash-icon { font-size: 32px !important; width: 100%; text-align: center; }
+  .pq-card h1     { font-size: 20px !important; width: 100%; margin: 0 !important; }
+  .pq-card > p    { font-size: 12px !important; width: 100%; margin: 0 !important; }
+
+  .pq-rules {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 12px !important;
+    gap: 4px !important;
+  }
+  .pq-rules li { font-size: 11px !important; }
+
+  .pq-btn-primary {
+    padding: 10px !important;
+    font-size: 15px !important;
+    flex: 1;
+    min-width: 120px;
+  }
+  .pq-btn-back { flex: 0 0 auto; }
+
+  .pq-stats { flex: 1; min-width: 200px; }
+
+  /* HUD 높이 절약 */
+  .pq-hud {
+    padding: 8px 16px 6px !important;
+  }
+  .pq-hud-val   { font-size: 20px !important; }
+  .pq-timer     { font-size: 18px !important; }
+  .pq-hud-lives { font-size: 14px !important; letter-spacing: 0 !important; }
+
+  /* 찾을 원소 영역 높이 절약 */
+  .pq-quest {
+    padding: 6px 16px 4px !important;
+    gap: 8px !important;
+  }
+  .pq-quest-name { font-size: 22px !important; }
+
+  /* 힌트 바 */
+  .pq-hint-bar { padding: 0 16px 4px !important; }
+
+  /* 토스트 */
+  .pq-toast-row { height: 28px !important; }
+
+  /* 진행 도트 */
+  .pq-progress { padding: 6px 0 8px !important; }
+
+  /* 셀 크기 축소: 가로 568px(최소폰)에서도 표 전체 표시 */
+  .pq-table { gap: 2px !important; }
+  .pq-row   { gap: 2px !important; }
+
+  .pq-cell {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 5px !important;
+  }
+  .pq-cell-sym  { font-size: 9px !important; }
+  .pq-cell-num  { font-size: 5px !important; top: 2px !important; left: 2px !important; }
+
+  .pq-blank .pq-cell-sym { font-size: 13px !important; }
+
+  .pq-group-label  { width: 26px !important; font-size: 7px !important; }
+  .pq-period-label { width: 12px !important; font-size: 7px !important; padding-right: 2px !important; }
+
+  /* 힌트 박스 크기 */
+  .pq-hint-chip { font-size: 11px !important; padding: 3px 9px !important; }
+
+  /* 테이블 래퍼: 가로 화면에서는 세로 스크롤 불필요 */
+  .pq-table-wrap {
+    overflow-x: hidden !important;
+    justify-content: center !important;
+    align-items: center !important;
+    display: flex !important;
+    padding: 4px 0 !important;
+  }
+}
